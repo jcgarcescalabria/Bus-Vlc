@@ -1,0 +1,33 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 1085407,
+    "appName": "Bus VLC",
+    "appType": "app",
+    "version": { "code": 1, "name": "1.0.0" },
+    "icon": "icon.png",
+    "vender": "zepp",
+    "description": "Próximos autobuses de la EMT de València en tus paradas"
+  },
+  "permissions": ["data:os.device.info", "device:os.local_storage"],
+  "runtime": {
+    "apiVersion": { "compatible": "3.0.0", "target": "3.0.0", "minVersion": "3.0" }
+  },
+  "debug": false,
+  "targets": {
+    "common": {
+      "module": {
+        "page": { "pages": ["page/index", "page/stop", "page/keypad"] },
+        "app-side": { "path": "app-side/index" },
+        "setting": { "path": "setting/index" }
+      },
+      "platforms": [{ "st": "r" }, { "st": "s" }],
+      "designWidth": 480
+    }
+  },
+  "i18n": {
+    "es-ES": { "appName": "Bus VLC" },
+    "en-US": { "appName": "Bus VLC" }
+  },
+  "defaultLanguage": "es-ES"
+}

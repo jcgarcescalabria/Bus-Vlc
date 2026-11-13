@@ -1,0 +1,17 @@
+{
+  "name": "bus-vlc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mini-app de Zepp OS (Amazfit) con la llegada de los autobuses de la EMT de València",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "zeus build",
+    "preview": "zeus preview"
+  },
+  "devDependencies": {
+    "@zeppos/device-types": "^4.0.0",
+    "@zeppos/zeus-cli": "^1.10.0",
+    "@zeppos/zml": "^0.0.43"
+  }
+}
