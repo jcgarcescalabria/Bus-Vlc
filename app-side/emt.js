@@ -1,6 +1,8 @@
 // Consulta de tiempos de llegada de la EMT de València.
-// Usa el mismo servicio que la web de la EMT (no es una API pública documentada,
-// así que puede cambiar sin aviso). Responde XML como:
+// Usa el mismo servicio que el mapa web de la EMT (geoportal.emtvalencia.es).
+// No es una API pública documentada, así que puede cambiar sin aviso: el
+// antiguo www.emtvalencia.es/EMT/mapfunctions/... ya responde «temporalment
+// no disponible des del pla». Responde XML como:
 //
 // <estimacion parada="636">
 //   <solo_parada>
@@ -10,16 +12,16 @@
 // </estimacion>
 
 export const EMT_TIMES_URL =
-  'https://www.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php'
+  'https://geoportal.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php'
 
 export const EMT_HEADERS = {
-  Accept: '*/*',
+  Accept: 'application/json, text/plain, */*',
   'Accept-Language': 'es-ES,es;q=0.9',
-  Referer: 'https://www.emtvalencia.es/',
+  Referer: 'https://geoportal.emtvalencia.es/visor?lang=es',
 }
 
 export function timesUrl(stopId, line) {
-  let url = `${EMT_TIMES_URL}?sec=getSAE&parada=${encodeURIComponent(stopId)}&adaptados=false`
+  let url = `${EMT_TIMES_URL}?sec=getSAE&parada=${encodeURIComponent(stopId)}&adaptados=false&idioma=es`
   if (line) url += `&linea=${encodeURIComponent(line)}`
   return url
 }
@@ -51,10 +53,19 @@ export function fixMojibake(s) {
   }
 }
 
+// Quita etiquetas HTML que a veces vienen dentro del texto (<center>, <br/>…).
+export function stripHtml(s) {
+  return s
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?[a-z][^>]*>/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function tag(xml, name) {
   const m = xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`))
   if (!m) return ''
-  return fixMojibake(decodeEntities(m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1'))).trim()
+  return stripHtml(fixMojibake(decodeEntities(m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1'))))
 }
 
 // Convierte el texto de <minutos> en minutos. null si no se entiende.
@@ -114,7 +125,10 @@ function sortKey(b) {
 
 function prettyError(e) {
   if (/sin estimaci/i.test(e)) return 'Sin estimaciones ahora mismo'
-  return e.charAt(0).toUpperCase() + e.slice(1).toLowerCase()
+  if (/no corresponde/i.test(e)) return 'Esa línea no pasa por esta parada'
+  if (/no disponible|no est[aà] disponible/i.test(e)) return 'La EMT no da estimaciones ahora mismo'
+  const t = e.length > 90 ? `${e.slice(0, 87)}…` : e
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
 }
 
 // Respuesta compacta para mandar al reloj por Bluetooth.

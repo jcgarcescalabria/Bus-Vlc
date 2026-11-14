@@ -19,7 +19,7 @@ Reloj (page/*)  ──Bluetooth──▶  App Zepp del móvil (app-side/)  ─�
 
 El reloj no tiene internet propio: pide los datos al móvil y la app Zepp hace la consulta. Por eso el móvil tiene que estar cerca, con Bluetooth y la app Zepp abierta en segundo plano.
 
-Los tiempos salen del mismo servicio que usa la web de la EMT (`MapUtilsPetitions.php?sec=getSAE`). **No es una API pública documentada**: si la EMT lo cambia, la app dejará de dar tiempos y habrá que adaptar `app-side/emt.js`.
+Los tiempos salen del mismo servicio que usa el mapa web de la EMT (`geoportal.emtvalencia.es`, `MapUtilsPetitions.php?sec=getSAE`). La dirección antigua en `www.emtvalencia.es` ya no da tiempos. **No es una API pública documentada**: si la EMT lo cambia, la app dejará de dar tiempos y habrá que adaptar `app-side/emt.js`.
 
 ## Instalarla en el reloj (desde el Mac)
 

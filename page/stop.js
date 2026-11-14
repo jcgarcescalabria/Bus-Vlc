@@ -6,6 +6,7 @@ import { C, Layer, W, button, errorText, px, readJson, text, ui, writeJson } fro
 
 const REFRESH_MS = 20 * 1000
 const MAX_ROWS = 7
+const KEEP_OLD_MS = 2 * 60 * 1000
 
 function two(n) {
   return n < 10 ? `0${n}` : `${n}`
@@ -51,6 +52,13 @@ Page(
       this.state.loading = true
       this.request({ method: 'bus.times', params: { stop: this.state.id } }, { timeout: 20000 })
         .then((data) => {
+          const old = this.state.data
+          const recent = old && old.buses && old.buses.length && Date.now() - old.ts < KEEP_OLD_MS
+          if (!data.buses.length && data.error && recent) {
+            // Fallo puntual de la EMT: mejor seguir enseñando los últimos tiempos.
+            this.state.status = `${data.error} · datos de ${clock(old.ts)}`
+            return
+          }
           this.state.data = data
           this.state.status = `Actualizado ${clock(data.ts || Date.now())}`
           writeJson(`times:${this.state.id}`, data)
@@ -82,8 +90,13 @@ Page(
       L.clear()
       let y = px(34)
 
-      text(L, { x: px(60), y, w: W - px(120), h: px(30), text: `Parada ${this.state.id}`, color: C.dim, text_size: px(22) })
-      y += px(30)
+      const title = `Parada ${this.state.id}`
+      if (this.state.name !== title) {
+        text(L, { x: px(60), y, w: W - px(120), h: px(30), text: title, color: C.dim, text_size: px(22) })
+        y += px(30)
+      } else {
+        y += px(14)
+      }
       text(L, { x: px(50), y, w: W - px(100), h: px(44), text: this.state.name, text_size: px(32) })
       y += px(56)
 

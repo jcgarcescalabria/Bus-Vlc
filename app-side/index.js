@@ -44,7 +44,8 @@ AppSideService(
         throw new Error(`La EMT respondió ${res.status}`)
       }
       const payload = toWatchPayload(id, parseTimes(bodyText(res.body)))
-      cache.set(id, payload)
+      // Los errores no se guardan: así el siguiente intento vuelve a preguntar.
+      if (payload.buses.length) cache.set(id, payload)
       return payload
     },
 

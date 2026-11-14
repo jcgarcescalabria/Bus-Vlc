@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fixMojibake, parseMinutes, parseTimes, timesUrl, toWatchPayload } from '../app-side/emt.js'
+import { fixMojibake, parseMinutes, parseTimes, stripHtml, timesUrl, toWatchPayload } from '../app-side/emt.js'
 import { addStop, cleanId, moveStop, parseStops, removeStop } from '../app-side/stops.js'
 
 // Ejemplos con el formato que devuelve la EMT (sacados de pyemtvlc).
@@ -68,7 +68,7 @@ test('parseMinutes', () => {
 test('URL y carga útil para el reloj', () => {
   assert.equal(
     timesUrl('636'),
-    'https://www.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php?sec=getSAE&parada=636&adaptados=false',
+    'https://geoportal.emtvalencia.es/EMT/mapfunctions/MapUtilsPetitions.php?sec=getSAE&parada=636&adaptados=false&idioma=es',
   )
   const p = toWatchPayload('636', parseTimes(DOS_BUSES), 123)
   assert.deepEqual(p.buses[0], { l: '70', d: 'Av. Ausiàs March', m: 0, h: '' })
@@ -86,4 +86,25 @@ test('lista de paradas', () => {
   assert.deepEqual(moveStop(l, '636', -1).map((s) => s.id), ['636', '1932'])
   assert.deepEqual(removeStop(l, '1932').map((s) => s.id), ['636'])
   assert.throws(() => addStop(l, 'abc'))
+})
+
+// Lo que devolvía el servidor antiguo (captura del simulador, parada 2416).
+const NO_DISPONIBLE = `<?xml version='1.0' encoding='UTF-8'?>
+<estimacion parada="2416"><solo_parada>
+  <bus><linea/><destino/><minutos/><horaLlegada/><error><![CDATA[<center>Temporalment no disponible des del pla.<br/>Consulta les estimacions a la web</center>]]></error></bus>
+</solo_parada><parada_linea/><info/></estimacion>`
+
+test('errores con HTML dentro', () => {
+  assert.equal(stripHtml('<center>Hola<br/>adiós</center>'), 'Hola adiós')
+  const r = parseTimes(NO_DISPONIBLE)
+  assert.equal(r.buses.length, 0)
+  assert.equal(r.error, 'La EMT no da estimaciones ahora mismo')
+  const esc = NO_DISPONIBLE.replace('<![CDATA[<center>', '&lt;center&gt;').replace('<br/>', '&lt;br/&gt;').replace('</center>]]>', '&lt;/center&gt;')
+  assert.equal(parseTimes(esc).error, 'La EMT no da estimaciones ahora mismo')
+})
+
+test('destino en CDATA y campo adaptado', () => {
+  const xml = `<estimacion parada="1"><solo_parada><bus><linea>19</linea><destino><![CDATA[Pl. Ajuntament]]></destino><minutos>4 min.</minutos><horaLlegada/><adaptado>1</adaptado><error/></bus></solo_parada></estimacion>`
+  const r = parseTimes(xml)
+  assert.deepEqual([r.buses[0].line, r.buses[0].dest, r.buses[0].min], ['19', 'Pl. Ajuntament', 4])
 })
