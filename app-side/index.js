@@ -1,22 +1,16 @@
 import { BaseSideService } from '@zeppos/zml/base-side'
-import { EMT_HEADERS, parseTimes, timesUrl, toWatchPayload } from './emt'
+import { nextDepartures, stopUrl, toWatchPayload } from './schedule'
 import { STOPS_KEY, addStop, parseStops, removeStop } from './stops'
 
-// Caché corta para no repetir la consulta si el reloj pide dos veces seguidas.
+// Horarios por parada descargados de la rama «datos». Se guardan unas horas:
+// cambian como mucho una vez al día.
 const cache = new Map()
-const CACHE_MS = 10 * 1000
+const CACHE_MS = 6 * 60 * 60 * 1000
 
-function bodyText(body) {
-  if (typeof body === 'string') return body
-  if (body && typeof body.text === 'string') return body.text
-  if (body && typeof body === 'object') {
-    try {
-      return JSON.stringify(body)
-    } catch (e) {
-      return ''
-    }
-  }
-  return ''
+function bodyJson(body) {
+  if (body && typeof body === 'object') return body
+  if (typeof body === 'string') return JSON.parse(body)
+  throw new Error('Respuesta vacía')
 }
 
 AppSideService(
@@ -30,23 +24,33 @@ AppSideService(
       return list
     },
 
-    async busTimes(stopId) {
+    async stopData(stopId) {
       const id = String(stopId)
       const hit = cache.get(id)
-      if (hit && Date.now() - hit.ts < CACHE_MS) return hit
-      const res = await this.fetch({
-        method: 'GET',
-        url: timesUrl(id),
-        headers: EMT_HEADERS,
-        timeout: 15000,
-      })
-      if (res.status && res.status >= 400) {
-        throw new Error(`La EMT respondió ${res.status}`)
+      if (hit && Date.now() - hit.at < CACHE_MS) return hit.data
+      const res = await this.fetch({ method: 'GET', url: stopUrl(id), timeout: 15000 })
+      if (res.status === 404) throw new Error(`La parada ${id} no tiene horarios`)
+      if (res.status && res.status >= 400) throw new Error(`Error ${res.status} al bajar horarios`)
+      const data = bodyJson(res.body)
+      cache.set(id, { at: Date.now(), data })
+      return data
+    },
+
+    async busTimes(stopId) {
+      const data = await this.stopData(stopId)
+      return toWatchPayload(stopId, nextDepartures(data, new Date()))
+    },
+
+    async addStopNamed(id, name) {
+      let nm = name
+      if (!nm) {
+        try {
+          nm = (await this.stopData(id)).name
+        } catch (e) {
+          nm = '' // sin nombre: el reloj mostrará «Parada N»
+        }
       }
-      const payload = toWatchPayload(id, parseTimes(bodyText(res.body)))
-      // Los errores no se guardan: así el siguiente intento vuelve a preguntar.
-      if (payload.buses.length) cache.set(id, payload)
-      return payload
+      return this.saveStops(addStop(this.getStops(), id, nm))
     },
 
     onRequest(req, res) {
@@ -57,7 +61,7 @@ AppSideService(
           case 'stops.get':
             return res(null, { stops: this.getStops() })
           case 'stops.add':
-            return res(null, { stops: this.saveStops(addStop(this.getStops(), p.id, p.name)) })
+            return this.addStopNamed(p.id, p.name).then((stops) => res(null, { stops }), fail)
           case 'stops.remove':
             return res(null, { stops: this.saveStops(removeStop(this.getStops(), p.id)) })
           case 'bus.times':

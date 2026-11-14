@@ -1,4 +1,7 @@
-// Consulta de tiempos de llegada de la EMT de València.
+// Consulta de tiempos de llegada EN TIEMPO REAL de la EMT de València.
+// AHORA NO SE USA: la EMT ha restringido este servicio a su visor web (responde
+// «Temporalmente no disponible desde el plano»). Se conserva el lector del XML
+// por si la EMT abre un acceso oficial con este formato.
 // Usa el mismo servicio que el mapa web de la EMT (geoportal.emtvalencia.es).
 // No es una API pública documentada, así que puede cambiar sin aviso: el
 // antiguo www.emtvalencia.es/EMT/mapfunctions/... ya responde «temporalment

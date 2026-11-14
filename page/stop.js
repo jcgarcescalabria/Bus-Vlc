@@ -4,7 +4,7 @@ import { back } from '@zos/router'
 import { setPageBrightTime } from '@zos/display'
 import { C, Layer, W, button, errorText, px, readJson, text, ui, writeJson } from './ui'
 
-const REFRESH_MS = 20 * 1000
+const REFRESH_MS = 30 * 1000
 const MAX_ROWS = 7
 const KEEP_OLD_MS = 2 * 60 * 1000
 
@@ -19,7 +19,7 @@ function clock(ts) {
 
 function when(b) {
   if (b.m === 0) return 'Ya'
-  if (typeof b.m === 'number') return `${b.m} min`
+  if (typeof b.m === 'number') return b.m < 60 ? `${b.m} min` : b.h || `${b.m} min`
   return b.h || '—'
 }
 
@@ -60,7 +60,9 @@ Page(
             return
           }
           this.state.data = data
-          this.state.status = `Actualizado ${clock(data.ts || Date.now())}`
+          this.state.status = data.scheduled
+            ? 'Horario programado, no es tiempo real'
+            : `Actualizado ${clock(data.ts || Date.now())}`
           writeJson(`times:${this.state.id}`, data)
         })
         .catch((e) => {
@@ -135,15 +137,20 @@ Page(
         const soon = typeof b.m === 'number' && b.m <= 2
         L.add(ui.widget.FILL_RECT, { x: px(52), y: y + px(12), w: px(84), h: px(52), radius: px(26), color: C.accent })
         text(L, { x: px(52), y: y + px(12), w: px(84), h: px(52), text: b.l, color: 0x000000, text_size: px(28) })
+        const sched = data && data.scheduled && b.h
         text(L, {
           x: px(148),
-          y,
+          y: sched ? y + px(4) : y,
           w: px(178),
-          h: px(76),
+          h: sched ? px(40) : px(76),
           text: b.d,
           text_size: px(24),
           align_h: ui.align.LEFT,
         })
+        if (sched) {
+          // Hora de paso según el horario oficial.
+          text(L, { x: px(148), y: y + px(40), w: px(178), h: px(32), text: b.h, color: C.dim, text_size: px(22), align_h: ui.align.LEFT })
+        }
         text(L, {
           x: px(326),
           y,
