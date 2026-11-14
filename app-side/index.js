@@ -15,6 +15,10 @@ function bodyJson(body) {
 
 AppSideService(
   BaseSideService({
+    onInit() {
+      this.log('[bus-vlc] side service arrancado')
+    },
+
     getStops() {
       return parseStops(this.settings.getItem(STOPS_KEY))
     },
@@ -55,7 +59,11 @@ AppSideService(
 
     onRequest(req, res) {
       const p = req.params || {}
-      const fail = (e) => res({ message: (e && e.message) || String(e) })
+      this.log('[bus-vlc] petición', req.method, JSON.stringify(p))
+      const fail = (e) => {
+        this.error('[bus-vlc] error', req.method, (e && e.message) || String(e))
+        res({ message: (e && e.message) || String(e) })
+      }
       try {
         switch (req.method) {
           case 'stops.get':
