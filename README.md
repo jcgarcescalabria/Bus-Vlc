@@ -8,8 +8,11 @@ Mini-app de Zepp OS para el Amazfit Active 3. Eliges una de tus paradas y ves cu
 
 - **Mis paradas** (pantalla principal): tus paradas guardadas. Al tocar una ves sus próximas salidas.
 - **Próximas salidas**: cada línea con su destino, la hora programada y los minutos que faltan. «Ya» y el verde indican que el bus sale en 2 min o menos.
-- **+ Añadir parada**: teclado numérico para escribir el número de parada, el que aparece en el poste. El nombre se rellena solo.
-- **Ajustes en el móvil** (app Zepp › tu reloj › Bus VLC › Ajustes): para añadir paradas con nombre («Casa», «Box»…), renombrarlas, ordenarlas y borrarlas.
+- **Cerca de mí**: usa el GPS del reloj y propone las paradas más próximas (con distancia y líneas). Al tocar una, se guarda y se abre. Al aire libre el GPS tarda menos; si no coge señal en 2 minutos, avisa.
+- **+ Por número**: teclado numérico para escribir el número de parada, el que aparece en el poste. El nombre se rellena solo.
+- **Ajustes en el móvil** (app Zepp › tu reloj › Bus VLC › Ajustes):
+  - **Buscar parada** por nombre o calle («La Fe», «Blasco Ibáñez»), por número, o por línea (salen todas sus paradas en orden de recorrido, en cada sentido). Se pueden combinar: línea 6 + «fe».
+  - Renombrar («Casa», «Box»…), ordenar y borrar tus paradas.
 
 ## Cómo funciona
 
@@ -23,6 +26,7 @@ Reloj (page/*) ──Bluetooth──▶ App Zepp del móvil (app-side/) ──HT
 
 - `tools/download_gtfs.py` baja el GTFS más reciente del [portal de datos abiertos de València](https://opendata.vlci.valencia.es/dataset/google-transit-lines-stops-bus-schedules). La EMT lo renueva cada semana y cada archivo cubre unas 4 o 5 semanas.
 - `tools/gtfs_to_stops.py` lo convierte en un JSON pequeño por parada (la 2158 ocupa 1,8 KB; la más grande, unos 27 KB).
+  También genera `search.json` (unos 100 KB; 28 KB comprimido), con todas las paradas, sus líneas y coordenadas, y el recorrido de cada línea. Lo usan el buscador y «Cerca de mí».
 - `.github/workflows/horarios.yml` hace las dos cosas cada día y publica el resultado en la rama `datos`.
 - La app descarga `https://raw.githubusercontent.com/jcgarcescalabria/Bus-Vlc/datos/stops/<parada>.json`. **Para eso el repositorio tiene que ser público**: los datos son públicos (horarios de la EMT, CC BY 4.0) y en el código no hay nada privado.
 
@@ -82,14 +86,13 @@ Comprueban el cálculo de próximas salidas (servicios pasada la medianoche, dí
 ## Ficheros
 
 - `app.json`: configuración de la app (páginas, permisos, versión de API mínima 3.0).
-- `page/index.js`: lista de paradas. `page/stop.js`: llegadas con autorefresco. `page/keypad.js`: teclado. `page/ui.js`: estilos y utilidades.
-- `app-side/index.js`: servicio en el móvil. `app-side/schedule.js`: próximas salidas según el horario. `app-side/stops.js`: lista de paradas. `app-side/emt.js`: lector del tiempo real de la EMT (sin uso ahora).
+- `page/index.js`: lista de paradas. `page/stop.js`: llegadas con autorefresco. `page/keypad.js`: teclado. `page/near.js`: «Cerca de mí». `page/ui.js`: estilos y utilidades.
+- `app-side/index.js`: servicio en el móvil. `app-side/schedule.js`: próximas salidas según el horario. `app-side/stops.js`: lista de paradas. `app-side/search.js`: buscador y paradas cercanas. `app-side/emt.js`: lector del tiempo real de la EMT (sin uso ahora).
 - `tools/`: descarga y conversión del GTFS. `.github/workflows/horarios.yml`: actualización diaria.
 - `setting/index.js`: página de ajustes en la app Zepp.
 
 ## Ideas para más adelante
 
 - Tiempo real cuando la EMT o el Ayuntamiento lo abran (GTFS-Realtime o la línea 6 en el servicio de seguimiento).
-- Paradas cercanas usando el GPS del móvil.
 - Avisar con una vibración cuando falten 2 minutos.
 - Filtrar por línea en una parada con muchas líneas.

@@ -59,7 +59,7 @@ Page(
           y,
           w: W - px(140),
           h: px(150),
-          text: 'Aún no tienes paradas.\nAñádelas con el botón + o en los ajustes de la app en Zepp.',
+          text: 'Aún no tienes paradas.\nUsa «Cerca de mí» o búscalas en los ajustes de la app en Zepp.',
           color: C.dim,
           text_size: px(24),
           text_style: ui.text_style.WRAP,
@@ -84,10 +84,19 @@ Page(
         y: y + px(6),
         w: bw - px(80),
         h: px(72),
-        text: '+ Añadir parada',
+        text: 'Cerca de mí',
         color: 0x000000,
         normal_color: C.accent,
         press_color: C.accentPress,
+        click_func: () => push({ url: 'page/near' }),
+      })
+      y += px(86)
+      button(L, {
+        x: bx + px(40),
+        y: y + px(6),
+        w: bw - px(80),
+        h: px(72),
+        text: '+ Por número',
         click_func: () => push({ url: 'page/keypad' }),
       })
       y += px(90)

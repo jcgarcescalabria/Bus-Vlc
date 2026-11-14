@@ -1,5 +1,6 @@
 import { BaseSideService } from '@zeppos/zml/base-side'
-import { nextDepartures, stopUrl, toWatchPayload } from './schedule'
+import { DATA_BASE_URL, nextDepartures, stopUrl, toWatchPayload } from './schedule'
+import { nearestStops, searchStops } from './search'
 import { STOPS_KEY, addStop, parseStops, removeStop } from './stops'
 
 // Horarios por parada descargados de la rama «datos». Se guardan unas horas:
@@ -40,6 +41,31 @@ AppSideService(
       return data
     },
 
+    // Índice de todas las paradas (buscador y «Cerca de mí»).
+    async searchIndex() {
+      const hit = cache.get('__search')
+      if (hit && Date.now() - hit.at < CACHE_MS) return hit.data
+      const res = await this.fetch({ method: 'GET', url: `${DATA_BASE_URL}/search.json`, timeout: 20000 })
+      if (res.status && res.status >= 400) throw new Error(`Error ${res.status} al bajar el índice de paradas`)
+      const data = bodyJson(res.body)
+      cache.set('__search', { at: Date.now(), data })
+      return data
+    },
+
+    // Búsqueda pedida desde la página de ajustes: lee la consulta y deja los
+    // resultados en settingsStorage, que la página vuelve a pintar.
+    async runSearch() {
+      const q = this.settings.getItem('search:q') || ''
+      const line = this.settings.getItem('search:line') || ''
+      let out
+      try {
+        out = searchStops(await this.searchIndex(), { q, line })
+      } catch (e) {
+        out = { groups: [], error: (e && e.message) || String(e) }
+      }
+      this.settings.setItem('search:results', JSON.stringify({ ...out, at: Date.now() }))
+    },
+
     async busTimes(stopId) {
       const data = await this.stopData(stopId)
       return toWatchPayload(stopId, nextDepartures(data, new Date()))
@@ -72,6 +98,11 @@ AppSideService(
             return this.addStopNamed(p.id, p.name).then((stops) => res(null, { stops }), fail)
           case 'stops.remove':
             return res(null, { stops: this.saveStops(removeStop(this.getStops(), p.id)) })
+          case 'stops.near':
+            return this.searchIndex().then(
+              (idx) => res(null, { stops: nearestStops(idx, Number(p.lat), Number(p.lon)) }),
+              fail,
+            )
           case 'bus.times':
             return this.busTimes(p.stop).then((r) => res(null, r), fail)
           default:
@@ -82,6 +113,8 @@ AppSideService(
       }
     },
 
-    onSettingsChange() {},
+    onSettingsChange({ key } = {}) {
+      if (key === 'search:go') this.runSearch()
+    },
   }),
 )

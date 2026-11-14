@@ -11,7 +11,11 @@ Salida: <salida>/stops/<id>.json con este formato:
     "d": {"20261114": [0, 3], ...}                           # grupos de "g" que circulan cada día
   }
 Los minutos pueden pasar de 1440 (servicios después de medianoche, como en GTFS).
-Además escribe <salida>/index.json con la versión y el número de paradas.
+Además escribe:
+  <salida>/index.json   versión y número de paradas
+  <salida>/search.json  índice para el buscador de los ajustes:
+    {"version": ..., "stops": [["2158", "nombre", ["6"], 39.44549, -0.37355], ...],
+     "lines": {"6": [["Torrefiel", ["1234", "2158", ...]], ...]}}   # paradas en orden de recorrido
 """
 import csv
 import io
@@ -74,7 +78,14 @@ def main(src, dst):
         r["trip_id"]: (routes.get(r["route_id"], r["route_id"]), (r.get("trip_headsign") or "").strip(), r["service_id"])
         for r in rows(op, "trips.txt")
     }
-    stops = {r["stop_id"]: r["stop_name"].strip() for r in rows(op, "stops.txt")}
+    stop_rows = list(rows(op, "stops.txt"))
+    stops = {r["stop_id"]: r["stop_name"].strip() for r in stop_rows}
+    coords = {}
+    for r in stop_rows:
+        try:
+            coords[r["stop_id"]] = (round(float(r["stop_lat"]), 5), round(float(r["stop_lon"]), 5))
+        except (KeyError, ValueError):
+            pass
     svc = service_dates(op)
 
     # Última parada de cada viaje: ahí el bus termina, no se puede subir.
@@ -121,6 +132,36 @@ def main(src, dst):
         with open(os.path.join(out_dir, f"{stop_id}.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
         written += 1
+
+    # Buscador: líneas de cada parada y recorrido de cada línea (el viaje más largo
+    # de cada línea y destino, con sus paradas en orden).
+    trip_stops = defaultdict(list)
+    for trip_id, stop_id, seq, _ in times:
+        trip_stops[trip_id].append((seq, stop_id))
+    longest = {}
+    for trip_id, seqs in trip_stops.items():
+        if trip_id not in trips:
+            continue
+        line, dest, _ = trips[trip_id]
+        if len(seqs) > len(longest.get((line, dest), [])):
+            longest[(line, dest)] = [sid for _, sid in sorted(seqs)]
+    lines_by_stop = defaultdict(set)
+    for stop_id, groups in by_stop.items():
+        for line, _, _ in groups:
+            lines_by_stop[stop_id].add(line)
+    line_key = lambda l: (not l[:1].isdigit(), int("".join(c for c in l if c.isdigit()) or 0), l)
+    search = {
+        "version": feed.get("feed_version", ""),
+        "stops": [
+            [sid, stops.get(sid, ""), sorted(lines_by_stop[sid], key=line_key), *coords.get(sid, (None, None))]
+            for sid in sorted(by_stop, key=lambda x: int(x) if x.isdigit() else 0)
+        ],
+        "lines": {},
+    }
+    for (line, dest), seq in sorted(longest.items(), key=lambda kv: (line_key(kv[0][0]), kv[0][1])):
+        search["lines"].setdefault(line, []).append([dest, seq[:-1] if len(seq) > 1 else seq])
+    with open(os.path.join(dst, "search.json"), "w", encoding="utf-8") as f:
+        json.dump(search, f, ensure_ascii=False, separators=(",", ":"))
 
     with open(os.path.join(dst, "index.json"), "w", encoding="utf-8") as f:
         json.dump(

@@ -24,6 +24,70 @@ AppSettingsPage({
     this.state.props = props
     const stops = this.stops()
     const err = this.draft('error')
+    const saved = new Set(stops.map((s) => s.id))
+    let results = null
+    try {
+      results = JSON.parse(props.settingsStorage.getItem('search:results') || 'null')
+    } catch (e) {}
+    const st = props.settingsStorage
+
+    const resultRow = (s) =>
+      View(
+        { style: { display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #eee' } },
+        [
+          View({ style: { flex: 1 } }, [
+            Text({ paragraph: true, style: { fontSize: '15px' } }, `${s.id} · ${s.name}`),
+            Text({ paragraph: true, style: { fontSize: '12px', color: '#888' } }, `Líneas: ${s.lines.join(', ') || '—'}`),
+          ]),
+          saved.has(s.id)
+            ? Text({ style: { color: '#2a2', marginLeft: '8px', fontSize: '13px' } }, 'Añadida ✓')
+            : Button({
+                label: 'Añadir',
+                style: { marginLeft: '8px', background: ACCENT, color: '#000', borderRadius: '16px' },
+                onClick: () => this.save(addStop(this.stops(), s.id, s.name)),
+              }),
+        ],
+      )
+
+    const searchSection = View({ style: { padding: '18px 12px', marginTop: '10px', background: '#f6f6f6' } }, [
+      Text({ bold: true, paragraph: true }, 'Buscar parada'),
+      Text(
+        { paragraph: true, style: { color: '#777', fontSize: '12px', marginTop: '4px' } },
+        'Por nombre o calle (p. ej. «La Fe», «Blasco Ibáñez») o por número. Si pones solo la línea, salen todas sus paradas en orden.',
+      ),
+      TextInput({
+        label: 'Nombre, calle o número',
+        placeholder: 'p. ej. Hospital La Fe',
+        value: st.getItem('search:q') || '',
+        onChange: (v) => st.setItem('search:q', String(v)),
+      }),
+      TextInput({
+        label: 'Línea (opcional)',
+        placeholder: 'p. ej. 6',
+        value: st.getItem('search:line') || '',
+        onChange: (v) => st.setItem('search:line', String(v).trim()),
+      }),
+      Button({
+        label: 'Buscar',
+        style: { marginTop: '12px', background: ACCENT, color: '#000', borderRadius: '24px' },
+        onClick: () => {
+          st.setItem('search:results', JSON.stringify({ loading: true }))
+          st.setItem('search:go', String(Date.now()))
+        },
+      }),
+      results && results.loading
+        ? Text({ paragraph: true, style: { color: '#777', marginTop: '10px' } }, 'Buscando…')
+        : null,
+      results && results.error
+        ? Text({ paragraph: true, style: { color: '#d33', marginTop: '10px' } }, results.error)
+        : null,
+      ...((results && results.groups) || []).map((g) =>
+        View({ style: { marginTop: '12px' } }, [
+          Text({ bold: true, paragraph: true, style: { fontSize: '14px' } }, g.title),
+          ...g.stops.map(resultRow),
+        ]),
+      ),
+    ].filter(Boolean))
 
     const row = (s, i) =>
       View(
@@ -62,7 +126,7 @@ AppSettingsPage({
         Text({ bold: true, paragraph: true, style: { fontSize: '20px' } }, 'Bus VLC · Mis paradas'),
         Text(
           { paragraph: true, style: { color: '#777', fontSize: '13px', marginTop: '6px' } },
-          'El número de parada aparece en el poste de la parada y en la web de la EMT. ' +
+          'Busca tu parada abajo, o en el reloj usa «Cerca de mí». ' +
             'Los cambios llegan al reloj la próxima vez que abras la app.',
         ),
       ]),
@@ -71,8 +135,10 @@ AppSettingsPage({
         Text({ paragraph: true, style: { color: '#999', padding: '12px 0' } }, 'Todavía no hay paradas.'),
       ]),
 
+      searchSection,
+
       View({ style: { padding: '18px 12px', marginTop: '10px', background: '#f6f6f6' } }, [
-        Text({ bold: true, paragraph: true }, 'Añadir parada'),
+        Text({ bold: true, paragraph: true }, 'Añadir por número'),
         TextInput({
           label: 'Número de parada',
           placeholder: 'p. ej. 636',
