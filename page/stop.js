@@ -34,7 +34,9 @@ Page(
       } catch (e) {}
       this.state.id = String(p.id || '')
       this.state.name = p.name || `Parada ${this.state.id}`
-      this.state.data = readJson(`times:${this.state.id}`, null)
+      // Solo vale la caché de la versión con horarios (la de tiempo real daba errores).
+      const cached = readJson(`times:${this.state.id}`, null)
+      this.state.data = cached && cached.scheduled ? cached : null
       this.layer = new Layer()
     },
 

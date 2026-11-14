@@ -91,7 +91,10 @@ export function button(layer, opts) {
 
 export function errorText(e) {
   if (!e) return 'Error'
-  if (e.message) return e.message
-  if (e.reason) return 'Sin conexión con el móvil'
-  return String(e)
+  const msg = String(e.message || e.reason || e)
+  // Errores del canal reloj ↔ móvil (zml): 1 handshake, 2 Bluetooth, 3 sin side service, 4 timeout
+  if (e.code === 2 || /ble disconnect/i.test(msg)) return 'Sin Bluetooth con el móvil'
+  if (e.code === 3 || /side service/i.test(msg)) return 'La app Zepp del móvil no responde'
+  if (e.code === 1 || e.code === 4 || /timeout/i.test(msg)) return 'El móvil no responde'
+  return msg
 }

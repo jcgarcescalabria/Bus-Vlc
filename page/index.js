@@ -27,7 +27,7 @@ Page(
     },
 
     sync() {
-      this.request({ method: 'stops.get' })
+      this.request({ method: 'stops.get' }, { timeout: 15000 })
         .then(({ stops }) => {
           this.state.stops = stops
           this.state.status = ''
