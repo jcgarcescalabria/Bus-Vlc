@@ -84,7 +84,8 @@ export function parseMinutes(text) {
 // min: minutos (0 = llegando); time: hora «HH:MM» cuando la EMT no da minutos.
 export function parseTimes(xml) {
   if (typeof xml !== 'string' || !/<estimacion[\s>]/.test(xml)) {
-    return { buses: [], error: 'Respuesta inesperada de la EMT' }
+    const raw = stripHtml(String(xml ?? '')).slice(0, 140)
+    return { buses: [], error: 'Respuesta inesperada de la EMT', raw }
   }
   const buses = []
   const errors = []
@@ -107,10 +108,12 @@ export function parseTimes(xml) {
   }
   buses.sort((a, b) => sortKey(a) - sortKey(b))
   let error = ''
+  let raw = ''
   if (!buses.length) {
     error = errors.length ? prettyError(errors[0]) : 'Sin autobuses previstos'
+    raw = errors.length ? errors[0].slice(0, 140) : ''
   }
-  return { buses, error }
+  return { buses, error, raw }
 }
 
 function sortKey(b) {
@@ -137,6 +140,7 @@ export function toWatchPayload(stopId, parsed, now = Date.now()) {
     stop: String(stopId),
     ts: now,
     error: parsed.error,
+    raw: parsed.raw || '',
     buses: parsed.buses.slice(0, 8).map((b) => ({ l: b.line, d: b.dest, m: b.min, h: b.time })),
   }
 }

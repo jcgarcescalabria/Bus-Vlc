@@ -114,7 +114,21 @@ Page(
           text_size: px(28),
           text_style: ui.text_style.WRAP,
         })
-        y += px(130)
+        y += px(124)
+        if (data && data.raw) {
+          // Texto literal de la EMT, para saber qué ha pasado.
+          text(L, {
+            x: px(70),
+            y,
+            w: W - px(140),
+            h: px(96),
+            text: `EMT: «${data.raw}»`,
+            color: C.dim,
+            text_size: px(18),
+            text_style: ui.text_style.WRAP,
+          })
+          y += px(100)
+        }
       }
 
       for (const b of buses.slice(0, MAX_ROWS)) {

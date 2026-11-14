@@ -99,6 +99,8 @@ test('errores con HTML dentro', () => {
   const r = parseTimes(NO_DISPONIBLE)
   assert.equal(r.buses.length, 0)
   assert.equal(r.error, 'La EMT no da estimaciones ahora mismo')
+  assert.equal(r.raw, 'Temporalment no disponible des del pla. Consulta les estimacions a la web')
+  assert.equal(toWatchPayload('2416', r).raw, r.raw)
   const esc = NO_DISPONIBLE.replace('<![CDATA[<center>', '&lt;center&gt;').replace('<br/>', '&lt;br/&gt;').replace('</center>]]>', '&lt;/center&gt;')
   assert.equal(parseTimes(esc).error, 'La EMT no da estimaciones ahora mismo')
 })
